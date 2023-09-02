@@ -13,15 +13,16 @@ public class Ejecutador {
      */
 
     // Ruta estatica relativa del programa java
-    static String sRutaEstaticaRelativa = ("C:\\Users\\yailp\\OneDrive\\Documentos\\GitHub\\AnalizadorSintactico\\Ejemplo.txt");
+    
+    static String sRutaEstaticaRelativa = ("C:\\Users\\Jadri\\OneDrive\\Documentos\\GitHub\\GenTblSimb\\GeneracionDeTablaDeSimbolos\\Ejemplo.txt");
 
     public static void main(String[] args) throws IOException {
 
         // Envia el codigo fuente obtenido el un archivo tipo java a la estapa de
         // analisis
-        // Analisis cAnalizador = new
-        // Analisis(ObtenerCodigoFuente(sRutaEstaticaRelativa));
-        // cAnalizador.Generar();
+        Analisis cAnalizador = new
+        Analisis(ObtenerCodigoFuente(sRutaEstaticaRelativa));
+        cAnalizador.Generar();
     }
 
     public static String ObtenerCodigoFuente(String sRutaEstatica) throws IOException {

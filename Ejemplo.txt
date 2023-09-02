@@ -1,9 +1,7 @@
-Inicio 
-real cuenta, numero, resultado; 
-entero valor; 
-Leer (valor); 
-cuenta = 23 + (numero – valor); 
-numero = cuenta / 123.99;
-resultado = numero + cuenta; 
-Escribir (resultado); 
-Fin
+Triangulo ( 1 , 4 )-(2, 
+
+2
+Triangulo
+
+Circulo
+2
