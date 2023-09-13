@@ -8,30 +8,30 @@ public class TablaSimbolos {
     private float valor;
 
     public TablaSimbolos() {
-       
+
     }
 
-    public void setToken( String token ){
-        this.token=token;
+    public void setToken(String token) {
+        this.token = token;
     }
 
-    public String getToken(){
+    public String getToken() {
         return token;
     }
 
-    public void setTipo( String tipo ){
-        this.tipo=tipo;
+    public void setTipo(String tipo) {
+        this.tipo = tipo;
     }
 
-    public String getTipo(){
+    public String getTipo() {
         return tipo;
     }
 
-    public void setIdToken( int idToken ){
-        this.idToken=idToken;
+    public void setIdToken(int idToken) {
+        this.idToken = idToken;
     }
 
-    public int getIdToken(){
+    public int getIdToken() {
         return idToken;
     }
 
@@ -42,7 +42,7 @@ public class TablaSimbolos {
     public void setRepeticiones(int repeticiones) {
         this.repeticiones = repeticiones;
     }
- 
+
     public String getLinea() {
         return linea;
     }
@@ -50,7 +50,7 @@ public class TablaSimbolos {
     public void setLinea(String linea) {
         this.linea = linea;
     }
- 
+
     public float getValor() {
         return valor;
     }

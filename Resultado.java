@@ -19,8 +19,9 @@ public class Resultado {
                 for (int x = 0; x < oSimbolos.length; x++) {
                         var Simbolo = oSimbolos[x];
 
-                        System.out.format("%10s %10s %10s %10s %10s %10s", Simbolo.Token, Simbolo.Tipo, Simbolo.IdToken,
-                                        Simbolo.Repeticiones, Simbolo.Linea, Simbolo.Valor);
+                        System.out.format("%10s %10s %10s %10s %10s %10s", Simbolo.getToken(), Simbolo.getTipo(),
+                                        Simbolo.getIdToken(),
+                                        Simbolo.getRepeticiones(), Simbolo.getLinea(), Simbolo.getValor());
                         System.out.println();
 
                 }
