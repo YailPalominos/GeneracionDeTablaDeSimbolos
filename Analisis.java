@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -5,160 +7,312 @@ public class Analisis {
 
     /**
      * @author Braulio Yail Palominos Patiño
-     * @co Author Jose Adrian Terrones Perez
      */
 
-    /*
-     * Ojo
-     * Tomar en cuenta que las llaves alteran la posicion de los grupos del marcher
-     * En caso de agregar mas grupos
-     */
+    private String codigoFuente = ""; // Codigo fuente resibido de la clase de ejecutador
+    private List<Simbolo> TablaSimbolos;// Lista de TablaSimbolos donde se guardara toda la información
+    private int posLectura = 0; // posicion de lectura con respecto al codigo fuente
+    private int linea = 1; // Linea en la que va la posicion de lectura con respecto al codigo fuente
+    private int Id = 0; // Id que se asingnara a las variables que se vayan inicializando
 
-    /*
-     * Estas son las expreciones regulares que utiliza generalmente el analizador
-     * lexico
-     *
-     * Palabras reservadas
-     * (class|for|if|float|int|boolean|static|new|static|void|int|string|import|
-     * public|else|programa|binario)|"
-     * + "Identificadores ([a-zA-Z]+)|"
-     * + "Relacionales ([<|>]+)|"
-     * + "Aritmeticas ([+]|[-])|"
-     * + "Asignacion([=]+)|"
-     * + "Parentesis ([(|)]+)|"
-     * + "LLaves ([{|}]+)|"
-     * + "Punto y coma(;)|"
-     * + "Binario ([0-1]b)|"
-     * + "Octal ([0-8]o)|"
-     * + "Hexadecimal (^[0-9A-F]+$)|"
-     * + "Espacios (^(\s)*)";
-     */
-
-    String sCodigoFuente = ""; // Codigo fuente resibido
-    String sCodigoFuenteErrores = ""; // Codigo fuente resibido
-    // de analisis
-    String[] aFiguras = new String[0]; // Cadena de las figuras a analizar
-    Resultado oResultado = new Resultado(); // Clase para imprimir los resultados
-    // Validacion oDesglosar = new Validacion(); // Clase para verificar la cadena
-    // de figura
-    int nPosLectura = 0; // posicion de lectura con respecto al codigo fuente
-    int nLinea = 0; // Linea en la que va la posicion de lectura con respecto al codigo fuente
-
-    TablaSimbolos[] TaToken = new TablaSimbolos[0];
-
-    public Analisis(String sCodigoFuente) {
-        this.sCodigoFuente = sCodigoFuente;
-        this.sCodigoFuenteErrores = sCodigoFuente;
+    public Analisis(String codigoFuente) {
+        this.codigoFuente = codigoFuente;
     }
 
     // Genera las clases con los simbolos
     public void Generar() {
 
+        // Inicializamos la tabla de simbolos
+        TablaSimbolos = new ArrayList<Simbolo>();
         // Codigo fuente a chart para leer parte por parte
-        var cLetras = this.sCodigoFuenteErrores.toCharArray();
-        String sPalabra = "";
-        Pattern pPatronError = Pattern.compile(
-                "(((\\(\\d{1,2},\\d{1,2}\\)){2,4})+-+\\([1-3]\\)+-+\\((25[0-5]|2[0-4]\\d|1\\d{1,2}|\\d{1,2}),(25[0-5]|2[0-4]\\d|1\\d{1,2}|\\d{1,2}),(25[0-5]|2[0-4]\\d|1\\d{1,2}|\\d{1,2})\\))");
-        this.nPosLectura = 0;
+        var letras = this.codigoFuente.toCharArray();
+        String palabra = "";
+        String palabras = "";
+
+        // Expreciones regulares:
+        Pattern cambioLinea = Pattern.compile("\n");
+        Pattern iniciarVariable = Pattern.compile("((Real|Entero) ([a-zA-Z0-9.]*)\\;)");
+        Pattern iniciarVariableConValor = Pattern.compile("((Real|Entero) ([a-zA-Z0-9.]*)\\=\\d*\\;)");
+        Pattern iniciarVariables = Pattern
+                .compile("((Real|Entero) (([a-zA-Z0-9.]+)\\,)(([a-zA-Z0-9.]+)\\,)*(([a-zA-Z0-9.]+)\\;))");
+        Pattern iniciarVariablesConValor = Pattern.compile(
+                "((Real|Entero) (([a-zA-Z0-9.]+\\=\\d*)\\,)(([a-zA-Z0-9.]+\\=\\d*)\\,)*(([a-zA-Z0-9.]+\\=\\d*)\\;))");
+        Pattern leerOEscribirVariables = Pattern.compile("((Leer|Escribir)\\(([a-zA-Z0-9.]*\\))\\;)");
+        Pattern realizarOperacion = Pattern.compile(
+                "[a-zA-Z0-9]+\\=+(([a-zA-Z0-9.]+(\\+|\\/|\\*|\\-)+[a-zA-Z0-9.]+\\;)|([a-zA-Z0-9.]+(\\+|\\/|\\*|\\-)+\\(+[a-zA-Z0-9.]+(\\+|\\-|\\/|\\*)+[a-zA-Z0-9.]+\\)+\\;))");
+
+        // 1)
+        // Real cuenta,numero,resultado;
+        // Entero valor;
+        // Leer(valor);
+        // cuenta=23+(numero-valor);
+        // numero=cuenta/123.99;
+        // resultado=numero+cuenta;
+        // Escribir(resultado);
+        // 2)
+        // Real a,b,c,d,e,f,g;
+        // Entero var1,var2,var3,var4,var5,var6;
+        // Escribir(var1);
+        // 3)
+        // Entero personas;
+        // Real dinero,recaudado;
+        // recaudado=personas*real;
+        // Escribir(recaudado);
+
         // Recorre palabra por palabra encontrada
-        for (int y = 0; y < cLetras.length; y++) {
+        for (int y = 0; y < letras.length; y++) {
 
-            nLinea = ObtenerLinea(sCodigoFuenteErrores, y);
-            sPalabra += cLetras[y];
-            this.nPosLectura++;
+            palabra += letras[y];
+            posLectura++;
 
-            if (sPalabra.split("\\s").length > 0) {
-                this.nPosLectura -= 1;
-                sPalabra = sPalabra.trim();
+            if (palabra.split("\\s").length > 0) {
+                palabra = palabra.trim();
 
-                char cLeta = cLetras[y];
-                var x = ((cLeta + "").replace("", " ").trim());
+                char letra = letras[y];
+                var x = ((letra + "").replace("", " ").trim());
 
-                if (sPalabra.equals("Rectangulo")) {
-                    sPalabra = sPalabra.replaceAll("Rectangulo", "");
-                    nPosLectura += "Rectangulo".length();
-                }
+                if (x.length() == 0 | x.equals(";")) {
 
-                if (sPalabra.equals("Triangulo")) {
-                    sPalabra = sPalabra.replaceAll("Triangulo", "");
-                    nPosLectura += "Triangulo".length();
-                }
-
-                if (sPalabra.equals("Cuadrado")) {
-                    sPalabra = sPalabra.replaceAll("Cuadrado", "");
-                    nPosLectura += "Cuadrado".length();
-                }
-                if (sPalabra.equals("Circulo")) {
-                    sPalabra = sPalabra.replaceAll("Circulo", "");
-                    nPosLectura += "Circulo".length();
-                }
-                if (sPalabra.equals("Linea")) {
-                    sPalabra = sPalabra.replaceAll("Linea", "");
-                    nPosLectura += "Linea".length();
-                }
-
-                if (x.length() == 0) {
-                    Matcher mMatcherError = pPatronError.matcher(sPalabra);
-
-                    if (mMatcherError.find()) {
-                        sPalabra = "";
+                    if (palabras.length() == 0) {
+                        palabras += palabra;
                     } else {
-                        this.nPosLectura += sPalabra.length();
-                        int nPosInicioLexema = this.nPosLectura - sPalabra.length();
-                        System.out.println();
-                        System.out.format("%10s %10s %10s %10s",
-                                " \033[31mERROR léxico:  \033[0m" + sPalabra, " Linea " + nLinea,
-                                " Inicia " + nPosInicioLexema, " Termina " + nPosLectura);
-                        System.out.println();
-                        sPalabra = "";
+                        palabras += " " + palabra;
                     }
+                    palabra = "";
+
+                    // Para detectar el cambio de linea
+                    Matcher matcherCambioLinea = cambioLinea.matcher(codigoFuente);
+                    matcherCambioLinea.region(0, y);
+                    linea = 1;
+                    while (matcherCambioLinea.find()) {
+                        linea++;
+                        posLectura = 0;
+                    }
+
+                    Matcher matcherIniciarVariable = iniciarVariable.matcher(palabras);
+                    Matcher matcherIniciarVariableConValor = iniciarVariableConValor.matcher(palabras);
+                    Matcher matcherIniciarVariables = iniciarVariables.matcher(palabras);
+                    Matcher matcherIniciarVariablesConValor = iniciarVariablesConValor.matcher(palabras);
+                    Matcher matcherLeerEscribirVariables = leerOEscribirVariables.matcher(palabras);
+                    Matcher matcherRealizarOperaciones = realizarOperacion.matcher(palabras);
+
+                    if (matcherIniciarVariable.find()) {
+                        // Es una asignación de una sola variable sin valor asignado.
+                        // Ejemplo: Real variable;
+                        String[] arregloPalabras = palabras.split(" ");
+                        AgregarSimbolo(arregloPalabras[1].replace(";", ""), arregloPalabras[0], Id, 1, "" + linea,
+                                "0");
+                        palabras = "";
+                        Id++;
+                    }
+
+                    if (matcherIniciarVariableConValor.find()) {
+                        // Es una asignación de una sola variable con una valor asignado.
+                        // Ejemplo: Real variable=12;
+                        String[] arregloPalabras = palabras.split(" ");
+                        String[] valorYNombre = arregloPalabras[1].split("=");
+                        AgregarSimbolo(valorYNombre[0], arregloPalabras[0], Id, 1, "" + linea,
+                                valorYNombre[1].replace(";", ""));
+                        palabras = "";
+                        Id++;
+                    }
+
+                    if (matcherIniciarVariables.find()) {
+                        // Es una asignación de varias variables a la vez sin un valor inicial.
+                        // Ejemplo: Real cuenta,numero,resultado;
+                        String tipo = "";
+
+                        if (palabras.contains("Real ")) {
+                            palabras = palabras.replace("Real ", "");
+                            tipo = "Real";
+                        }
+                        if (palabras.contains("Entero ")) {
+                            palabras = palabras.replace("Entero ", "");
+                            tipo = "Entero";
+                        }
+                        palabras = palabras.replace(";", "");
+
+                        String[] arregloPalabras = palabras.split(",");
+                        for (String variable : arregloPalabras) {
+                            AgregarSimbolo(variable, tipo, Id, 1,
+                                    "" + linea, "0");
+                            Id += 1;
+                        }
+                        palabras = "";
+                    }
+
+                    if (matcherIniciarVariablesConValor.find()) {
+                        // Es una asignación de varias variables a la vez con un valor inicial.
+                        // Ejemplo: Entero x=1,y=2,z=0;
+                        String tipo = "";
+
+                        if (palabras.contains("Real ")) {
+                            palabras = palabras.replace("Real ", "");
+                            tipo = "Real";
+                        }
+                        if (palabras.contains("Entero ")) {
+                            palabras = palabras.replace("Entero ", "");
+                            tipo = "Entero";
+                        }
+                        palabras = palabras.replace(";", "");
+
+                        String[] arregloPalabras = palabras.split(",");
+                        for (String variable : arregloPalabras) {
+                            String[] valorYNombre = variable.split("=");
+                            AgregarSimbolo(valorYNombre[0], tipo, Id, 1,
+                                    "" + linea, valorYNombre[1]);
+                            Id += 1;
+                        }
+                        palabras = "";
+                    }
+
+                    if (matcherLeerEscribirVariables.find()) {
+                        // Es para leer o escribir las variables
+                        // Ejemplo: Leer(valor);
+                        // Ejemplo: Escribir(valor);
+                        palabras = palabras.replace("Leer", "");
+                        palabras = palabras.replace("Escribir", "");
+                        palabras = palabras.replace("(", "");
+                        palabras = palabras.replace(")", "");
+                        palabras = palabras.replace(";", "");
+
+                        if (ComprobarToken(palabras) == false) {
+                            GenerarError("No se encontro el token", palabras);
+                        }
+                        palabras = "";
+                    }
+
+                    if (matcherRealizarOperaciones.find()) {
+                        // Es para validar operaciones
+                        // cuenta=23+(numero-valor);
+                        // numero=cuenta/123.99;
+                        // resultado=numero+cuenta;
+
+                        // Primero separamos la parte de la asignación
+                        palabras = palabras.replace(";", "");
+                        String[] asignacion = palabras.split("=");
+
+                        // Separamos las operaciones para identificar si son consntantes o variables
+                        // previamente asignadas.
+                        if (ComprobarToken(asignacion[0]) == false) {
+                            GenerarError("No se encontro el token al cual se le esta asignando", palabras);
+                        }
+                        String operacion = asignacion[1];
+                        operacion = operacion.replace("(", "");
+                        operacion = operacion.replace(")", "");
+                        operacion = operacion.replace(";", "");
+
+                        operacion = operacion.replace("+", " ");
+                        operacion = operacion.replace("-", " ");
+                        operacion = operacion.replace("/", " ");
+                        operacion = operacion.replace("*", " ");
+
+                        String[] variables = operacion.split(" ");
+
+                        for (String variable : variables) {
+                            if (VerificarConstante(variable) == false) {
+                                if (ComprobarToken(variable) == false) {
+                                    GenerarError("No se encontro el token", variable);
+                                }
+                            }
+                        }
+
+                        palabras = "";
+                    }
+
                 }
             }
         }
+        // Imprimimos la tabla de simbolos.
+        System.out.println();
+        System.out.println(
+                "---------------------------------------------------------------------------------------------------------------------------------");
+        System.out.printf("%70s", "Tabla de simbolos");
+        System.out.println();
+        System.out.println(
+                "---------------------------------------------------------------------------------------------------------------------------------");
+        System.out.printf("%10s %10s %10s %10s %10s %10s", "Token", "Tipo", "Id", "Repeticiones", "Linea", "Valor");
+        System.out.println();
+        System.out.println(
+                "---------------------------------------------------------------------------------------------------------------------------------");
+        for (
 
-        this.oResultado.ImprimirTblaTokens(TaToken);
-
-    }
-
-    public void AgregarTablaToken(String sToken, String sLexema, int nLinea, int nPosInicioLexema,
-            int nPosFinalLexema) {
-
-        TablaSimbolos[] aTblaTokensNueva = this.TaToken;
-        aTblaTokensNueva = new TablaSimbolos[this.TaToken.length + 1];
-        System.arraycopy(this.TaToken, 0, aTblaTokensNueva, 0, this.TaToken.length);
-
-        // TablaSimbolos oTblaSimbolo = new TablaSimbolos();
-        // oTblaSimbolo.simbolo = sToken;
-        // oTblaSimbolo.lexema = sLexema;
-        // oTblaSimbolo.linea = nLinea;
-        // oTblaSimbolo.posInicioSimbolo = nPosInicioLexema;
-        // oTblaSimbolo.posFinalSimbolo = nPosFinalLexema;
-        // oTblaSimbolo.posFinalSimbolo = nPosFinalLexema;
-
-        // if (oTblaSimbolo.simbolo.contains("Figura:")) {
-        // AgregarFigura(oTblaSimbolo.lexema);
-        // }
-
-        // aTblaTokensNueva[aTblaTokensNueva.length - 1] = oTblaSimbolo;
-        this.TaToken = aTblaTokensNueva;
-
-    }
-
-    int ObtenerLinea(String sCodigoFuente, int nInicio) {
-        int nLinea = 0;
-        Pattern pPatron = Pattern.compile("\n");
-        Matcher mMatcher = pPatron.matcher(sCodigoFuente);
-        mMatcher.region(0, nInicio);
-
-        while (mMatcher.find()) {
-            nLinea++;
+                int x = 0; x < TablaSimbolos.size(); x++) {
+            Simbolo oSimbolo = TablaSimbolos.get(x);
+            System.out.format("%10s %10s %10s %10s %10s %10s", oSimbolo.token, oSimbolo.tipo, oSimbolo.idToken,
+                    oSimbolo.repeticiones, oSimbolo.linea, oSimbolo.valor);
+            System.out.println();
         }
-
-        if (this.nLinea != nLinea) {
-            nPosLectura = 0;
-        }
-
-        return (nLinea);
+        System.out.println(
+                "---------------------------------------------------------------------------------------------------------------------------------");
     }
 
+    public boolean ComprobarToken(String token) {
+        for (Simbolo simbolo : TablaSimbolos) {
+            if (simbolo.token.equals(token)) {
+                AñadirRepeticion(token);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void AñadirRepeticion(String token) {
+        for (Simbolo simbolo : TablaSimbolos) {
+            if (simbolo.token.equals(token)) {
+                simbolo.repeticiones++;
+                simbolo.linea = simbolo.linea + "," + linea;
+            }
+        }
+    }
+
+    public void GenerarError(String error, String palabra) {
+
+        System.out.println();
+        System.out.format("%10s %10s %10s %10s",
+                " \033[31mError " + error + ": \033[0m" + palabra, "Linea " + linea,
+                " Inicia " + (posLectura), " Termina " + (posLectura + palabra.length()));
+        System.out.println();
+        return;
+    }
+
+    public boolean VerificarConstante(String constante) {
+        Pattern constantes = Pattern
+                .compile("[\\d.]+");
+        Matcher matcherConstantes = constantes.matcher(constante);
+        if (matcherConstantes.find()) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public Simbolo VerSimbolo(String token) {
+        for (Simbolo simbolo : TablaSimbolos) {
+            if (simbolo.token.equals(token)) {
+                return simbolo;
+            }
+        }
+        return null;
+    }
+
+    public void EscribirSimbolo(Simbolo oSimbolo) {
+        for (int x = 0; x < TablaSimbolos.size(); x++) {
+            if (TablaSimbolos.get(x).token.equals(oSimbolo.token)) {
+                TablaSimbolos.set(x, oSimbolo);
+            }
+        }
+    }
+
+    public void AgregarSimbolo(String token, String tipo, int idToken, int repeticiones, String linea,
+            String valor) {
+        Simbolo oSimbolo = new Simbolo();
+        oSimbolo.token = token;
+        oSimbolo.tipo = tipo;
+        oSimbolo.idToken = idToken;
+        oSimbolo.repeticiones = repeticiones;
+        oSimbolo.linea = linea;
+        oSimbolo.valor = valor;
+        TablaSimbolos.add(oSimbolo);
+    }
 }
